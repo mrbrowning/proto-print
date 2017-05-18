@@ -28,7 +28,7 @@ identifier = many1 $ lower <|> char '_'
 
 -- <value> ::= <numberValue>|<stringValue>|<enumValue>
 value :: Parser Value
-value = stringValue <|> numberValue <|> enumValue
+value = stringValue <|> numberValue <|> enumValue <|> booleanValue
 
 -- <pair> ::= <identifier>: <value>
 pair :: Parser Pair
@@ -65,6 +65,10 @@ stringValue =
 -- <enumValue> ~ [A-Z_]+
 enumValue :: Parser String
 enumValue = many1 $ upper <|> char '_'
+
+-- <booleanValue> ::= true|false
+booleanValue :: Parser String
+booleanValue = string "true" <|> string "false"
 
 printItems :: [Item] -> State String String
 printItems items = do
