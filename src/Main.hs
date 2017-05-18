@@ -26,6 +26,10 @@ concat3 xs ys zs = xs ++ ys ++ zs
 identifier :: Parser Identifier
 identifier = many1 $ lower <|> char '_'
 
+-- <value> ::= <numberValue>|<stringValue>|<enumValue>
+value :: Parser Value
+value = stringValue <|> numberValue <|> enumValue
+
 -- <pair> ::= <identifier>: <value>
 pair :: Parser Pair
 pair = spaces *> (Pair <$> (identifier <* char ':' <* space) <*> value) <* spaces
@@ -39,24 +43,28 @@ item = try (ObjectItem <$> object) <|> (PairItem <$> pair)
 object :: Parser Object
 object =
     spaces *>
-    (Object <$> (identifier <* spaces <* char '{') <*> many1 item) <*
-    char '}' <* spaces
+    (Object <$> (identifier <* spaces <* char '{') <* spaces <*> many item) <*
+    spaces <* char '}' <* spaces
 
--- <number> ~ ([0-9]+(\.[0-9]+)?)
-number :: Parser String
-number =
-    (++) <$> many1 digit <*>
-    (((++) <$> (fmap toList $ char '.') <*> many1 digit) <|> string "")
+-- <numberValue> ~ [0-9]+(\.[0-9]+(E[0-9]+)?)?
+numberValue :: Parser String
+numberValue =
+    concat3 <$>
+        many1 digit <*>
+        (((++) <$> (fmap toList $ char '.') <*> many1 digit) <|> string "") <*>
+        (((++) <$> (fmap toList $ char 'E') <*> many1 digit) <|> string "")
 
--- <value> ~ ("[^"]+"|<number>|[A-Z_]+)
-value :: Parser Value
-value =
-    (concat3 <$>
+-- <stringValue> ~ "[^"]+"
+stringValue :: Parser String
+stringValue =
+    concat3 <$>
         (fmap toList $ char '"') <*>
         (many $ noneOf ['"']) <*>
-        (fmap toList $ char '"')) <|>
-    number <|>
-    (many1 $ upper <|> char '_')
+        (fmap toList $ char '"')
+
+-- <enumValue> ~ [A-Z_]+
+enumValue :: Parser String
+enumValue = many1 $ upper <|> char '_'
 
 printItems :: [Item] -> State String String
 printItems items = do
