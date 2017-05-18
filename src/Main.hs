@@ -42,15 +42,27 @@ object =
     (Object <$> (identifier <* spaces <* char '{') <*> many1 item) <*
     char '}' <* spaces
 
--- <value> ~ ("[^"]+"|[0-9]+\.[0-9]+|[A-Z_]+)
+-- <number> ~ ([0-9]+(\.[0-9]+)?)
+number :: Parser String
+number =
+    (++) <$> many1 digit <*>
+    (((++) <$> (fmap toList $ char '.') <*> many1 digit) <|> string "")
+
+-- <value> ~ ("[^"]+"|<number>|[A-Z_]+)
 value :: Parser Value
 value =
     (concat3 <$>
         (fmap toList $ char '"') <*>
         (many $ noneOf ['"']) <*>
         (fmap toList $ char '"')) <|>
-    (concat3 <$> many1 digit <*> (fmap toList $ char '.') <*> many1 digit) <|>
+    number <|>
     (many1 $ upper <|> char '_')
+
+printItems :: [Item] -> State String String
+printItems items = do
+    indent <- get
+    itemStrings <- sequence $ map ((fmap (\s -> indent ++ s ++ "\n")) . prettyPrint) items
+    return $ foldl' (++) [] itemStrings
 
 prettyPrint :: Item -> State String String
 prettyPrint (PairItem (Pair k v)) = return $ k ++ ": " ++ v
@@ -60,17 +72,12 @@ prettyPrint (ObjectItem (Object id items)) = do
     put $ indent ++ "    "
     contents <- printItems items
     put indent
-    return $ firstLine ++ (foldl' (++) [] contents) ++ indent ++ "}"
-  where
-    printItems :: [Item] -> State String [String]
-    printItems items = do
-        indent <- get
-        sequence $ map ((fmap (\s -> indent ++ s ++ "\n")) . prettyPrint) items
+    return $ firstLine ++ contents ++ indent ++ "}"
 
 main :: IO ()
 main = do
     (fileName:_) <- getArgs
-    result <- parseFromFile item fileName
+    result <- parseFromFile (many item) fileName
     case result of
         Left _ -> putStrLn "Couldn't parse protobuf"
-        Right item -> putStrLn $ fst $ runState (prettyPrint item) ""
+        Right output -> putStrLn $ fst $ runState (printItems output) ""
