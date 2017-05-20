@@ -92,4 +92,4 @@ main = do
     result <- parseFromFile (many item) fileName
     case result of
         Left _ -> putStrLn "Couldn't parse protobuf"
-        Right output -> putStrLn $ fst $ runState (printItems output) ""
+        Right output -> putStr $ fst $ runState (printItems output) ""
