@@ -1,7 +1,7 @@
 module Main where
 
 import Control.Monad.State
-import Data.Foldable (foldl')
+import Data.Traversable (forM)
 import System.Environment (getArgs)
 
 import Text.Parsec hiding (State)
@@ -14,10 +14,6 @@ data Object = Object Identifier [Item] deriving Show
 data Pair = Pair Identifier Value deriving Show
 data Item = ObjectItem Object | PairItem Pair deriving Show
 
-
--- for cases where type inference might not be able to infer what return means
-toList :: a -> [a]
-toList = return
 
 concat3 :: [a] -> [a] -> [a] -> [a]
 concat3 xs ys zs = xs ++ ys ++ zs
@@ -51,16 +47,16 @@ numberValue :: Parser String
 numberValue =
     concat3 <$>
         many1 digit <*>
-        (((++) <$> (fmap toList $ char '.') <*> many1 digit) <|> string "") <*>
-        (((++) <$> (fmap toList $ char 'E') <*> many1 digit) <|> string "")
+        (((++) <$> (pure <$> char '.') <*> many1 digit) <|> string "") <*>
+        (((++) <$> (pure <$> char 'E') <*> many1 digit) <|> string "")
 
 -- <stringValue> ~ "[^"]+"
 stringValue :: Parser String
 stringValue =
     concat3 <$>
-        (fmap toList $ char '"') <*>
+        (pure <$> char '"') <*>
         (many $ noneOf ['"']) <*>
-        (fmap toList $ char '"')
+        (pure <$> char '"')
 
 -- <enumValue> ~ [A-Z_]+
 enumValue :: Parser String
@@ -73,8 +69,8 @@ booleanValue = string "true" <|> string "false"
 printItems :: [Item] -> State String String
 printItems items = do
     indent <- get
-    itemStrings <- sequence $ map ((fmap (\s -> indent ++ s ++ "\n")) . prettyPrint) items
-    return $ foldl' (++) [] itemStrings
+    itemStrings <- forM items ((fmap $ \s -> indent ++ s ++ "\n") . prettyPrint)
+    return $ concat itemStrings
 
 prettyPrint :: Item -> State String String
 prettyPrint (PairItem (Pair k v)) = return $ k ++ ": " ++ v
