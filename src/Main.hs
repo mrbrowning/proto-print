@@ -55,7 +55,7 @@ stringValue :: Parser String
 stringValue =
     concat3 <$>
         (pure <$> char '"') <*>
-        (many $ noneOf ['"']) <*>
+        (concat <$> (many (try (string "\\\"") <|> (pure <$> noneOf ['"'])))) <*>
         (pure <$> char '"')
 
 -- <enumValue> ~ [A-Z_]+
