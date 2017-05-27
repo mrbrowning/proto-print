@@ -87,5 +87,5 @@ main = do
     (fileName:_) <- getArgs
     result <- parseFromFile (many item) fileName
     case result of
-        Left _ -> putStrLn "Couldn't parse protobuf"
+        Left error -> putStrLn $ show error
         Right output -> putStr $ fst $ runState (printItems output) ""
