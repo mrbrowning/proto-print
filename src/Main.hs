@@ -84,8 +84,11 @@ prettyPrint (ObjectItem (Object id items)) = do
 
 main :: IO ()
 main = do
-    (fileName:_) <- getArgs
-    result <- parseFromFile (many item) fileName
+    args <- getArgs
+    (source, contents) <- case args of
+        (fileName:_) -> fmap (\p -> (fileName, p)) $ readFile fileName
+        [] -> fmap (\p -> ("stdin", p)) $ getContents
+    result <- return $ parse (many item) source contents
     case result of
         Left error -> putStrLn $ show error
         Right output -> putStr $ fst $ runState (printItems output) ""
